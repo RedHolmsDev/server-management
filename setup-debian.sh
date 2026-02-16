@@ -16,10 +16,15 @@ set -euo pipefail
 echo "Disabling password auth for ssh"
 # ==================================
 
-tee /etc/ssh/ssh_config.d/9999-NoPassAuth.conf <<EOF
+tee /etc/ssh/ssh_config.d/00-security.conf <<EOF
 PasswordAuthentication no
 ChallengeResponseAuthentication no
+PermitRootLogin no
+PubkeyAuthentication yes
 EOF
+
+# Clone it so it works despite files loading order
+cp /etc/ssh/ssh_config.d/00-security.conf /etc/ssh/ssh_config.d/99-security.conf
 
 systemctl reload ssh
 
@@ -38,7 +43,7 @@ echo "Installing packages"
 # ==================================
 
 apt update
-apt install -y curl vim htop ufw
+apt install -y curl vim htop
 
 # ==================================
 echo "Setting up docker repository"
@@ -72,8 +77,15 @@ echo "Creating admin user (zahar)"
 useradd -m -d /home/zahar -s /bin/bash zahar
 mkdir -p /home/zahar
 chown -R zahar:zahar /home/zahar
-usermod -aG zahar quest2you
-usermod -aG sudo quest2you
+usermod -aG docker zahar
+usermod -aG sudo zahar
+
+mkdir -p /home/zahar/.ssh
+cp /root/.ssh/authorized_keys /home/zahar/.ssh/authorized_keys
+chmod go+r /home/zahar/.ssh/authorized_keys
+
+echo "Please setup the password for zahar"
+passwd zahar
 
 # ==================================
-echo "Done. Note that ssh keys and password for zahar is NOT set up"
+echo "Done. Now you should reconnect to ssh under zahar (ssh key is the same as for root)"
